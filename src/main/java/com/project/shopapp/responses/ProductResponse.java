@@ -26,6 +26,7 @@ public class ProductResponse extends BaseResponse{
     private String thumbnail;
     private String description;
     private Float stock_quantity;
+    private Integer quantity;
     @JsonProperty("product_images")
     private List<ProductImage> productImages = new ArrayList<>();
 
@@ -38,6 +39,7 @@ public class ProductResponse extends BaseResponse{
                 .price(product.getPrice())
                 .thumbnail(product.getThumbnail())
                 .description(product.getDescription())
+                .quantity(product.getQuantity())
                 .stock_quantity(product.getStock_quantity())
                 .categoryId(product.getCategory().getId())
                 .productImages(product.getProductImages())

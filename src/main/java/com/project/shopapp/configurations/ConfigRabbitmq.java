@@ -2,32 +2,55 @@ package com.project.shopapp.configurations;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
 import org.springframework.amqp.core.*;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class ConfigRabbitmq {
-    public static final String QUEUE = "test_queue";
-    public static final String EXCHANGE = "test_exchange";
-    public static final String ROUTING_KEY = "test_routing_key";
+    // Order processing queues and exchanges
+    public static final String ORDER_QUEUE = "order_queue";
+    public static final String ORDER_EXCHANGE = "order_exchange";
+    public static final String ORDER_ROUTING_KEY = "order.routing.key";
 
+    // Notification queue and exchange
+    public static final String NOTIFICATION_QUEUE = "notification_queue";
+    public static final String NOTIFICATION_EXCHANGE = "notification_exchange";
+    public static final String NOTIFICATION_ROUTING_KEY = "notification.routing.key";
+
+    // Order processing configuration
     @Bean
-    public Queue queue() {
-        return new Queue(QUEUE, true);
+    public Queue orderQueue() {
+        return new Queue(ORDER_QUEUE, true);
     }
 
     @Bean
-    public TopicExchange exchange() {
-        return new TopicExchange(EXCHANGE);
+    public DirectExchange orderExchange() {
+        return new DirectExchange(ORDER_EXCHANGE);
     }
 
     @Bean
-    public Binding binding(Queue queue, TopicExchange exchange) {
+    public Binding orderBinding(Queue orderQueue, DirectExchange orderExchange) {
         return BindingBuilder
-                .bind(queue)
-                .to(exchange)
-                .with(ROUTING_KEY);
+                .bind(orderQueue)
+                .to(orderExchange)
+                .with(ORDER_ROUTING_KEY);
+    }
+
+    // Notification configuration
+    @Bean
+    public Queue notificationQueue() {
+        return new Queue(NOTIFICATION_QUEUE, true);
+    }
+
+    @Bean
+    public DirectExchange notificationExchange() {
+        return new DirectExchange(NOTIFICATION_EXCHANGE);
+    }
+
+    @Bean
+    public Binding notificationBinding(Queue notificationQueue, DirectExchange notificationExchange) {
+        return BindingBuilder
+                .bind(notificationQueue)
+                .to(notificationExchange)
+                .with(NOTIFICATION_ROUTING_KEY);
     }
 }

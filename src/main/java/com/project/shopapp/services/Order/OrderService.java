@@ -1,15 +1,17 @@
 package com.project.shopapp.services.Order;
 
-import com.project.shopapp.dtos.CartItemDTO;
-import com.project.shopapp.dtos.OrderDTO;
-import com.project.shopapp.dtos.OrderDetailDTO;
-import com.project.shopapp.dtos.OrderWithDetailsDTO;
+import com.project.shopapp.dtos.Order.OrderDTO;
+import com.project.shopapp.dtos.Order.OrderDetailDTO;
+import com.project.shopapp.dtos.Order.OrderWithDetailsDTO;
+import com.project.shopapp.dtos.Categories.CartItemDTO;
 import com.project.shopapp.exceptions.DataNotFoundException;
+import com.project.shopapp.exceptions.InvalidParamException;
 import com.project.shopapp.models.*;
 import com.project.shopapp.repositories.OrderDetailRepository;
 import com.project.shopapp.repositories.OrderRepository;
 import com.project.shopapp.repositories.ProductRepository;
 import com.project.shopapp.repositories.UserRepository;
+import com.project.shopapp.services.coupon.CouponService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
@@ -27,66 +29,91 @@ public class OrderService implements IOrderService {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final OrderDetailRepository orderDetailRepository;
-
+    private final CouponService couponService;
     private final ModelMapper modelMapper;
 
     @Override
     @Transactional
     public Order createOrder(OrderDTO orderDTO) throws Exception {
-        //tìm xem user'id có tồn tại ko
+
         User user = userRepository
                 .findById(orderDTO.getUserId())
                 .orElseThrow(() -> new DataNotFoundException("Cannot find user with id: "+orderDTO.getUserId()));
+        
+
+        float totalMoney = orderDTO.getTotalMoney();
+        if (orderDTO.getCouponCode() != null && !orderDTO.getCouponCode().isEmpty()) {
+            try {
+                totalMoney = (float) couponService.calculateCouponValue(orderDTO.getCouponCode(), totalMoney);
+            } catch (Exception e) {
+                throw new DataNotFoundException("Invalid coupon code: " + e.getMessage());
+            }
+        }
+
         //convert orderDTO => Order
-        //dùng thư viện Model Mapper
-        // Tạo một luồng bảng ánh xạ riêng để kiểm soát việc ánh xạ
         modelMapper.typeMap(OrderDTO.class, Order.class)
                 .addMappings(mapper -> mapper.skip(Order::setId));
-        // Cập nhật các trường của đơn hàng từ orderDTO
+        
         Order order = new Order();
         modelMapper.map(orderDTO, order);
         order.setUser(user);
-        order.setOrderDate(LocalDate.now());//lấy thời điểm hiện tại
+        order.setOrderDate(LocalDate.now());
         order.setStatus(OrderStatus.PENDING);
-        //Kiểm tra shipping date phải >= ngày hôm nay
+        order.setTotalMoney(totalMoney);
+
+
         LocalDate shippingDate = orderDTO.getShippingDate() == null
                 ? LocalDate.now() : orderDTO.getShippingDate();
         if (shippingDate.isBefore(LocalDate.now())) {
             throw new DataNotFoundException("Date must be at least today !");
         }
         order.setShippingDate(shippingDate);
-        order.setActive(true);//đoạn này nên set sẵn trong sql
-        order.setTotalMoney(orderDTO.getTotalMoney());
-        orderRepository.save(order);
-        // Tạo danh sách các đối tượng OrderDetail từ cartItems
-        List<OrderDetail> orderDetails = new ArrayList<>();
-        for (CartItemDTO cartItemDTO : orderDTO.getCartItems()) {
-            // Tạo một đối tượng OrderDetail từ CartItemDTO
-            OrderDetail orderDetail = new OrderDetail();
-            orderDetail.setOrder(order);
+        order.setActive(true);
+        
 
-            // Lấy thông tin sản phẩm từ cartItemDTO
-            Long productId = cartItemDTO.getProductId();
-            int quantity = cartItemDTO.getQuantity();
+        Order savedOrder = orderRepository.save(order);
+        
 
-            // Tìm thông tin sản phẩm từ cơ sở dữ liệu (hoặc sử dụng cache nếu cần)
-            Product product = productRepository.findById(productId)
-                    .orElseThrow(() -> new DataNotFoundException("Product not found with id: " + productId));
-
-            // Đặt thông tin cho OrderDetail
-            orderDetail.setProduct(product);
-            orderDetail.setNumberOfProducts(quantity);
-            // Các trường khác của OrderDetail nếu cần
-            orderDetail.setPrice(product.getPrice());
-
-            // Thêm OrderDetail vào danh sách
-            orderDetails.add(orderDetail);
+        if (orderDTO.getCartItems() != null && !orderDTO.getCartItems().isEmpty()) {
+            List<OrderDetail> orderDetails = new ArrayList<>();
+            for (CartItemDTO cartItem : orderDTO.getCartItems()) {
+                Product product = productRepository.findById(cartItem.getProductId())
+                        .orElseThrow(() -> new DataNotFoundException(
+                                "Cannot find product with id: " + cartItem.getProductId()));
+                
+                // Validate quantity
+                if (cartItem.getQuantity() > product.getQuantity()) {
+                    throw new InvalidParamException(
+                            String.format("Order quantity (%d) exceeds available quantity (%d) for product: %s",
+                                    cartItem.getQuantity(),
+                                    product.getQuantity(),
+                                    product.getName())
+                    );
+                }
+                
+                // Update product quantity
+                product.setQuantity(product.getQuantity() - cartItem.getQuantity());
+                product.setStock_quantity(product.getStock_quantity() - cartItem.getQuantity());
+                productRepository.save(product);
+                
+                // Create order detail
+                OrderDetail orderDetail = OrderDetail.builder()
+                        .order(savedOrder)
+                        .product(product)
+                        .numberOfProducts(cartItem.getQuantity())
+                        .price(product.getPrice())
+                        .totalMoney(product.getPrice() * cartItem.getQuantity())
+                        .build();
+                
+                orderDetails.add(orderDetail);
+            }
+            
+            // Save all order details
+            orderDetailRepository.saveAll(orderDetails);
+            savedOrder.setOrderDetails(orderDetails);
         }
-
-
-        // Lưu danh sách OrderDetail vào cơ sở dữ liệu
-        orderDetailRepository.saveAll(orderDetails);
-        return order;
+        
+        return savedOrder;
     }
     @Transactional
     public Order updateOrderWithDetails(OrderWithDetailsDTO orderWithDetailsDTO) {
@@ -96,15 +123,12 @@ public class OrderService implements IOrderService {
         modelMapper.map(orderWithDetailsDTO, order);
         Order savedOrder = orderRepository.save(order);
 
-        // Set the order for each order detail
         for (OrderDetailDTO orderDetailDTO : orderWithDetailsDTO.getOrderDetailDTOS()) {
             //orderDetail.setOrder(OrderDetail);
         }
 
-        // Save or update the order details
         List<OrderDetail> savedOrderDetails = orderDetailRepository.saveAll(order.getOrderDetails());
 
-        // Set the updated order details for the order
         savedOrder.setOrderDetails(savedOrderDetails);
 
         return savedOrder;
@@ -124,7 +148,7 @@ public class OrderService implements IOrderService {
         User existingUser = userRepository.findById(
                 orderDTO.getUserId()).orElseThrow(() ->
                 new DataNotFoundException("Cannot find user with id: " + id));
-        // Tạo một luồng bảng ánh xạ riêng để kiểm soát việc ánh xạ
+        // bảng ánh xạ riêng để kiểm soát việc ánh xạ
         modelMapper.typeMap(OrderDTO.class, Order.class)
                 .addMappings(mapper -> mapper.skip(Order::setId));
         // Cập nhật các trường của đơn hàng từ orderDTO
@@ -137,7 +161,6 @@ public class OrderService implements IOrderService {
     @Transactional
     public void deleteOrder(Long id) {
         Order order = orderRepository.findById(id).orElse(null);
-        //no hard-delete, => please soft-delete
         if(order != null) {
             order.setActive(false);
             orderRepository.save(order);

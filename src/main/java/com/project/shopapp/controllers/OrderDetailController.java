@@ -2,8 +2,9 @@ package com.project.shopapp.controllers;
 
 import com.project.shopapp.Producers.MessageProducer;
 import com.project.shopapp.components.LocalizationUtils;
-import com.project.shopapp.dtos.OrderDetailDTO;
+import com.project.shopapp.dtos.Order.OrderDetailDTO;
 import com.project.shopapp.exceptions.DataNotFoundException;
+import com.project.shopapp.exceptions.InvalidParamException;
 import com.project.shopapp.models.OrderDetail;
 import com.project.shopapp.responses.OrderDetailResponse;
 import com.project.shopapp.services.OrderDetail.OrderDetailService;
@@ -23,7 +24,6 @@ public class OrderDetailController {
     private final LocalizationUtils localizationUtils;
     private final MessageProducer messageProducer;
 
-    // Thêm mới 1 order detail
     @PostMapping("")
     public ResponseEntity<?> createOrderDetail(
             @Valid @RequestBody OrderDetailDTO orderDetailDTO) {
@@ -43,7 +43,7 @@ public class OrderDetailController {
         return ResponseEntity.ok().body(OrderDetailResponse.fromOrderDetail(orderDetail));
     }
 
-    // Lấy danh sách order_details của 1 order
+
     @GetMapping("/order/{orderId}")
     public ResponseEntity<?> getOrderDetails(@Valid @PathVariable("orderId") Long orderId) {
         List<OrderDetail> orderDetails = orderDetailService.findByOrderId(orderId);
@@ -62,17 +62,21 @@ public class OrderDetailController {
             OrderDetail orderDetail = orderDetailService.updateOrderDetail(id, orderDetailDTO);
             logRabbit("Updated order detail ID: " + id + " for order ID: " + orderDetailDTO.getOrderId());
             return ResponseEntity.ok().body(orderDetail);
-        } catch (DataNotFoundException e) {
+        } catch (DataNotFoundException | InvalidParamException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteOrderDetail(@Valid @PathVariable("id") Long id) {
-        orderDetailService.deleteById(id);
-        logRabbit("Deleted order detail ID: " + id);
-        return ResponseEntity.ok()
-                .body(localizationUtils.getLocalizedMessage(MessageKeys.DELETE_ORDER_DETAIL_SUCCESSFULLY));
+        try {
+            orderDetailService.deleteById(id);
+            logRabbit("Deleted order detail ID: " + id);
+            return ResponseEntity.ok()
+                    .body(localizationUtils.getLocalizedMessage(MessageKeys.DELETE_ORDER_DETAIL_SUCCESSFULLY));
+        } catch (DataNotFoundException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     private void logRabbit(String msg) {

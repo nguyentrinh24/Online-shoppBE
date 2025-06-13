@@ -64,6 +64,10 @@ public class Order {
     @Column(name = "payment_method")
     private String paymentMethod;
 
+
+    @Column(name = "coupon_code")
+    private String couponCode;
+
     @Column(name = "active")
     private Boolean active;
 

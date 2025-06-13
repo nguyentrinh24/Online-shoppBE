@@ -1,6 +1,6 @@
 package com.project.shopapp.services.Product;
-import com.project.shopapp.dtos.ProductDTO;
-import com.project.shopapp.dtos.ProductImageDTO;
+import com.project.shopapp.dtos.product.ProductDTO;
+import com.project.shopapp.dtos.product.ProductImageDTO;
 import com.project.shopapp.responses.ProductResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -19,7 +19,7 @@ public interface IProductService {
     ProductImage createProductImage(
             Long productId,
             ProductImageDTO productImageDTO) throws Exception;
-    // Trong IProductService
+  
     void deleteProductImage(Long imageId) throws Exception;
 
     List<Product> findProductsByIds(List<Long> productIds);

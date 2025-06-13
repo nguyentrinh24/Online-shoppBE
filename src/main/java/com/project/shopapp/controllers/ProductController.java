@@ -3,7 +3,8 @@ package com.project.shopapp.controllers;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.project.shopapp.Producers.MessageProducer;
 import com.project.shopapp.components.LocalizationUtils;
-import com.project.shopapp.dtos.*;
+import com.project.shopapp.dtos.product.ProductDTO;
+import com.project.shopapp.dtos.product.ProductImageDTO;
 import com.project.shopapp.models.Product;
 import com.project.shopapp.models.ProductImage;
 import com.project.shopapp.responses.ProductListResponse;
@@ -33,7 +34,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("${api.prefix}/products")
@@ -44,8 +44,6 @@ public class ProductController {
     private final LocalizationUtils localizationUtils;
     private final MessageProducer messageProducer;
     private final IProductRedisService productRedisService;
-
-
 
     @PostMapping("")
     //POST http://localhost:8088/v1/api/products
@@ -90,7 +88,7 @@ public class ProductController {
                     continue;
                 }
                 // Kiểm tra kích thước file và định dạng
-                if(file.getSize() > 10 * 1024 * 1024) { // Kích thước > 10MB
+                if(file.getSize() > 10 * 1024 * 1024) {
                     return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
                             .body(localizationUtils
                                     .getLocalizedMessage(MessageKeys.UPLOAD_IMAGES_FILE_LARGE));
@@ -101,7 +99,7 @@ public class ProductController {
                             .body(localizationUtils.getLocalizedMessage(MessageKeys.UPLOAD_IMAGES_FILE_MUST_BE_IMAGE));
                 }
                 // Lưu file và cập nhật thumbnail trong DTO
-                String filename = storeFile(file); // Thay thế hàm này với code của bạn để lưu file
+                String filename = storeFile(file);
                 //lưu vào đối tượng product trong DB
                 ProductImage productImage = productService.createProductImage(
                         existingProduct.getId(),
@@ -110,6 +108,8 @@ public class ProductController {
                                 .build()
                 );
                 productImages.add(productImage);
+                
+                // Update
                 if (existingProduct.getThumbnail() == null && !productImages.isEmpty()) {
                     ProductDTO productDTO = ProductDTO.builder()
                             .name(existingProduct.getName())
@@ -117,11 +117,11 @@ public class ProductController {
                             .price(existingProduct.getPrice())
                             .thumbnail(productImages.get(0).getImageUrl())
                             .categoryId(existingProduct.getCategory().getId())
+                            .quantity(existingProduct.getQuantity())
+                            .stock_quantity(existingProduct.getStock_quantity())
                             .build();
                     productService.updateProduct(existingProduct.getId(), productDTO);
-
                 }
-
             }
             return ResponseEntity.ok().body(productImages);
         } catch (Exception e) {
@@ -188,14 +188,10 @@ public class ProductController {
         logger.info("keyword = {}, category_id = {}, page = {}, limit = {}",
                 keyword, categoryId, page, limit);
 
-
         List<ProductResponse> products = productRedisService.getAllProducts(keyword, categoryId, pageRequest);
-
-
         int totalPages;
         if (products != null) {
             logger.info("Cache hit for key all_products:{}:{}:{}:{}:*", keyword, categoryId, page, limit);
-
             Page<ProductResponse> pageInfo = productService.getAllProducts(keyword, categoryId, pageRequest);
             totalPages = pageInfo.getTotalPages();
         } else {
@@ -203,17 +199,12 @@ public class ProductController {
             Page<ProductResponse> pageResult = productService.getAllProducts(keyword, categoryId, pageRequest);
             products = pageResult.getContent();
             totalPages = pageResult.getTotalPages();
-
-
             productRedisService.saveAllProducts(products, keyword, categoryId, pageRequest);
         }
-
-
         ProductListResponse response = ProductListResponse.builder()
                 .products(products)
                 .totalPages(totalPages)
                 .build();
-
         return ResponseEntity.ok(response);
     }
 
@@ -259,29 +250,7 @@ public class ProductController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
-    //@PostMapping("/generateFakeProducts")
-//    private ResponseEntity<String> generateFakeProducts() {
-//        Faker faker = new Faker();
-//        for (int i = 0; i < 1_000_000; i++) {
-//            String productName = faker.commerce().productName();
-//            if(productService.existsByName(productName)) {
-//                continue;
-//            }
-//            ProductDTO productDTO = ProductDTO.builder()
-//                    .name(productName)
-//                    .price((float)faker.number().numberBetween(10, 90_000_000))
-//                    .description(faker.lorem().sentence())
-//                    .thumbnail("")
-//                    .categoryId((long)faker.number().numberBetween(2, 5))
-//                    .build();
-//            try {
-//                productService.createProduct(productDTO);
-//            } catch (Exception e) {
-//                return ResponseEntity.badRequest().body(e.getMessage());
-//            }
-//        }
-//        return ResponseEntity.ok("Fake Products created successfully");
-//    }
+
     //update a product
     @PutMapping("/{id}")
     public ResponseEntity<?> updateProduct(

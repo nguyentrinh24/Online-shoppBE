@@ -1,6 +1,6 @@
 package com.project.shopapp.services.Order;
 
-import com.project.shopapp.dtos.OrderDTO;
+import com.project.shopapp.dtos.Order.OrderDTO;
 import com.project.shopapp.exceptions.DataNotFoundException;
 import com.project.shopapp.models.Order;
 import org.springframework.data.domain.Page;

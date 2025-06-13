@@ -2,26 +2,22 @@ package com.project.shopapp.controllers;
 
 import com.project.shopapp.Producers.MessageProducer;
 import com.project.shopapp.components.LocalizationUtils;
-import com.project.shopapp.dtos.*;
+import com.project.shopapp.dtos.Order.OrderDTO;
 import com.project.shopapp.filters.AuthJwtToken;
 import com.project.shopapp.models.Order;
 import com.project.shopapp.models.User;
 import com.project.shopapp.repositories.OrderRepository;
-import com.project.shopapp.repositories.UserRepository;
 import com.project.shopapp.responses.*;
 import com.project.shopapp.services.Order.IOrderService;
 import com.project.shopapp.utils.MessageKeys;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.apache.tomcat.util.http.parser.Authorization;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.web.bind.annotation.AuthenticationPrincipal;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
@@ -29,7 +25,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -46,7 +41,6 @@ public class OrderController {
     @PostMapping("")
     public ResponseEntity<?> createOrder(
             @Valid @RequestBody OrderDTO orderDTO,
-            @RequestHeader(name = "Authorization") String authorization,
             BindingResult result
     ) {
         try {
@@ -58,19 +52,21 @@ public class OrderController {
                 return ResponseEntity.badRequest().body(err);
             }
 
-            String token = AuthJwtToken.extractToken(authorization);
 
             Order orderResponse = orderService.createOrder(orderDTO);
-            logRabbit("Created order ID: " + orderResponse.getId() + " for user ID: " + orderResponse.getUser().getId());
+            
+            // processing queue
+            messageProducer.sendOrderMessage("New order created: " + orderResponse.getId());
+            // Send notification
+            messageProducer.sendNotificationMessage("Order created successfully for user: " + orderResponse.getUser().getId());
 
             return ResponseEntity.ok()
-                    .header(HttpHeaders.AUTHORIZATION,"BEARER " +token)
                     .body(orderResponse);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
-    @GetMapping("/user/{user_id}") // Thêm biến đường dẫn "user_id"
+    @GetMapping("/user/{user_id}") //
     //GET http://localhost:8088/api/v1/orders/user/4
     public ResponseEntity<?> getOrders(@Valid @PathVariable("user_id") Long userId) {
         try {
@@ -112,9 +108,7 @@ public class OrderController {
         }
     }
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteOrder(@Valid @PathVariable Long id,
-                                         @RequestHeader(name = "Authorization") String authorization) {
-        String token = AuthJwtToken.extractToken(authorization);
+    public ResponseEntity<?> deleteOrder(@Valid @PathVariable Long id) {
         //xóa mềm => cập nhật trường active = false
         orderService.deleteOrder(id);
         logRabbit("Deleted order ID: " + id);
@@ -122,7 +116,6 @@ public class OrderController {
         String result = localizationUtils.getLocalizedMessage(
                 MessageKeys.DELETE_ORDER_SUCCESSFULLY, id);
         return ResponseEntity.ok()
-                .header(HttpHeaders.AUTHORIZATION,"BEARER " +token)
                 .body(result);
     }
 
@@ -131,16 +124,14 @@ public class OrderController {
     public ResponseEntity<OrderListResponse> getOrdersByKeyword(
             @RequestParam(defaultValue = "", required = false) String keyword,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int limit,
-            @RequestHeader(name = "Authorization",required = false) String authorizationHeader
+            @RequestParam(defaultValue = "10") int limit
+
     ) {
-        //token
-        String token = AuthJwtToken.extractToken(authorizationHeader);
+
 
         // Tạo Pageable từ thông tin trang và giới hạn
         PageRequest pageRequest = PageRequest.of(
                 page, limit,
-                //Sort.by("createdAt").descending()
                 Sort.by("id").ascending()
         );
         Page<OrderResponse> orderPage = orderService
@@ -155,13 +146,12 @@ public class OrderController {
                 .totalPages(totalPages)
                 .build();
        return ResponseEntity.ok()
-               .header(HttpHeaders.AUTHORIZATION,"BEARER "+token)
                .body(orderResponse);
     }
 
     private void logRabbit(String msg) {
         try {
-            messageProducer.sendMessage(msg);
+            messageProducer.sendNotificationMessage(msg);
         } catch (Exception e) {
             System.err.println("RabbitMQ failed: " + msg);
         }
@@ -169,11 +159,10 @@ public class OrderController {
 
     @GetMapping("/latest")
     public ResponseEntity<?> getLatestOrder(
-            @AuthenticationPrincipal User userDetails,
-            @RequestHeader(name = "Authorization", required = false) String authorizationHeader
+            @AuthenticationPrincipal User userDetails
+
     ) {
-        //Lấy token
-            String token = AuthJwtToken.extractToken(authorizationHeader);
+
 
         //  Lấy đơn hàng mới nhất
         Order order = orderRepository
@@ -184,13 +173,11 @@ public class OrderController {
                 ));
         //Build response
         Map<String,Object> body = Map.of(
-                "token", token,
                 "user", UserResponse.fromUser(userDetails),
                 "order", OrderResponse.fromOrder(order)
         );
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.AUTHORIZATION,"BEARER " + token)
                 .body(body);
     }
 

@@ -14,7 +14,7 @@ public class ProductListener {
 
     private static final Logger logger = LoggerFactory.getLogger(ProductListener.class);
 
-    private final IProductRedisService productRedisService;  // instance field, không static
+    private final IProductRedisService productRedisService;
 
     @PrePersist
     public void prePersist(Product product) {

@@ -2,8 +2,8 @@ package com.project.shopapp.services.User;
 
 import com.project.shopapp.components.JwtTokenUtils;
 import com.project.shopapp.components.LocalizationUtils;
-import com.project.shopapp.dtos.UpdateUserDTO;
-import com.project.shopapp.dtos.UserDTO;
+import com.project.shopapp.dtos.User.UpdateUserDTO;
+import com.project.shopapp.dtos.User.UserDTO;
 import com.project.shopapp.exceptions.DataNotFoundException;
 
 import com.project.shopapp.exceptions.PermissionDenyException;

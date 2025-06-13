@@ -1,7 +1,7 @@
 package com.project.shopapp.services.User;
 
-import com.project.shopapp.dtos.UpdateUserDTO;
-import com.project.shopapp.dtos.UserDTO;
+import com.project.shopapp.dtos.User.UpdateUserDTO;
+import com.project.shopapp.dtos.User.UserDTO;
 import com.project.shopapp.models.User;
 
 public interface IUserService {

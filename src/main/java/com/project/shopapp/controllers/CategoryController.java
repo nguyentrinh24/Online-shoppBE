@@ -1,7 +1,7 @@
 package com.project.shopapp.controllers;
 
 import com.project.shopapp.components.LocalizationUtils;
-import com.project.shopapp.dtos.*;
+import com.project.shopapp.dtos.Categories.CategoryDTO;
 import com.project.shopapp.models.Category;
 import com.project.shopapp.responses.CategoryResponse;
 import com.project.shopapp.responses.UpdateCategoryResponse;
@@ -52,7 +52,7 @@ public class CategoryController {
         return ResponseEntity.ok(categoryResponse);
     }
 
-    //Hiện tất cả các categories
+    // líst categories
     @GetMapping("")
     public ResponseEntity<List<Category>> getAllCategories(
             @RequestParam("page")     int page,

@@ -1,27 +1,30 @@
 package com.project.shopapp.services.Product;
 
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.project.shopapp.redis.BaseRedis;
 import com.project.shopapp.responses.ProductResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
 public class ProductRedisService implements IProductRedisService {
 
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final BaseRedis baseRedis;
     private final ObjectMapper redisObjectMapper;
+    
     @Value("${spring.data.redis.use-redis-cache}")
     private boolean useRedisCache;
+    
+    private static final long PRODUCT_LIST_CACHE_DURATION = 1; // 1 hour
 
     private String getKeyFrom(String keyword,
                               Long categoryId,
@@ -36,10 +39,9 @@ public class ProductRedisService implements IProductRedisService {
         return key;
     }
 
-
     @Override
     public void clear() {
-        redisTemplate.getConnectionFactory().getConnection().flushAll();
+
     }
 
     @Override
@@ -48,19 +50,18 @@ public class ProductRedisService implements IProductRedisService {
             return null;
         }
         String key = this.getKeyFrom(keyword, categoryId, pageRequest);
-        String json = (String) redisTemplate.opsForValue().get(key);
-        List<ProductResponse> productResponses =
-                json != null ?
-                        redisObjectMapper.readValue(json, new TypeReference<List<ProductResponse>>() {
-                        })
-                        : null;
-        return productResponses;
+        String json = (String) baseRedis.getProduct(key);
+        
+        if (json != null) {
+            return redisObjectMapper.readValue(json, new TypeReference<List<ProductResponse>>() {});
+        }
+        return null;
     }
 
     @Override
     public void saveAllProducts(List<ProductResponse> productResponses, String keyword, Long categoryId, PageRequest pageRequest) throws JsonProcessingException {
         String key = this.getKeyFrom(keyword, categoryId, pageRequest);
         String json = redisObjectMapper.writeValueAsString(productResponses);
-        redisTemplate.opsForValue().set(key, json);
+        baseRedis.setProductWithExpiration(key, json, PRODUCT_LIST_CACHE_DURATION, TimeUnit.HOURS);
     }
 }

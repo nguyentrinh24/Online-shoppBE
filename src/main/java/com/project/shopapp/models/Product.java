@@ -2,6 +2,7 @@ package com.project.shopapp.models;
 
 import jakarta.persistence.*;
 import lombok.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -35,11 +36,15 @@ public class Product extends BaseEntity{
     @Column(name="stock_quantity",nullable = false)
     private Float stock_quantity;
 
+    @Column(name = "quantity", nullable = false)
+    private Integer quantity;
+
     @ManyToOne
     @JoinColumn(name = "category_id")
     private Category category;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<ProductImage> productImages;
 
 }

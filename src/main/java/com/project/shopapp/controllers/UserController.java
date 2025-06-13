@@ -1,5 +1,8 @@
 package com.project.shopapp.controllers;
 
+import com.project.shopapp.dtos.User.UpdateUserDTO;
+import com.project.shopapp.dtos.User.UserDTO;
+import com.project.shopapp.dtos.User.UserLoginDTO;
 import com.project.shopapp.models.User;
 import com.project.shopapp.responses.LoginResponse;
 import com.project.shopapp.responses.RegisterResponse;
@@ -14,7 +17,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
-import com.project.shopapp.dtos.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +29,7 @@ public class UserController {
     private final LocalizationUtils localizationUtils;
 
     @PostMapping("/register")
-    //can we register an "admin" user ?
+
     public ResponseEntity<RegisterResponse> createUser(
             @Valid @RequestBody UserDTO userDTO,
             BindingResult result
@@ -64,14 +66,14 @@ public class UserController {
     public ResponseEntity<LoginResponse> login(
             @Valid @RequestBody UserLoginDTO userLoginDTO
     ) {
-        // Kiểm tra thông tin đăng nhập và sinh token
+
         try {
             String token = userService.login(
                     userLoginDTO.getPhoneNumber(),
                     userLoginDTO.getPassword(),
                     userLoginDTO.getRoleId() == null ? 1 : userLoginDTO.getRoleId()
             );
-            // Trả về token trong response
+
             return ResponseEntity.ok(LoginResponse.builder()
                             .message(localizationUtils.getLocalizedMessage(MessageKeys.LOGIN_SUCCESSFULLY))
                             .token(token)
@@ -89,7 +91,7 @@ public class UserController {
             @RequestHeader("Authorization") String authorizationHeader
     ) {
         try {
-            String extractedToken = authorizationHeader.substring(7); // Loại bỏ "Bearer " từ chuỗi token
+            String extractedToken = authorizationHeader.substring(7);
             User user = userService.getUserDetailsFromToken(extractedToken);
             return ResponseEntity.ok(UserResponse.fromUser(user));
         } catch (Exception e) {
@@ -105,7 +107,7 @@ public class UserController {
         try {
             String extractedToken = authorizationHeader.substring(7);
             User user = userService.getUserDetailsFromToken(extractedToken);
-            // Ensure that the user making the request matches the user being updated
+
             if (user.getId() != userId) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }

@@ -2,6 +2,7 @@ package com.project.shopapp.responses;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.project.shopapp.models.OrderDetail;
+import com.project.shopapp.models.Product;
 import lombok.*;
 
 @Getter
@@ -18,6 +19,12 @@ public class OrderDetailResponse {
     @JsonProperty("product_id")
     private Long productId;
 
+    @JsonProperty("product_name")
+    private String productName;
+
+    @JsonProperty("product_thumbnail")
+    private String productThumbnail;
+
     @JsonProperty("price")
     private Float price;
 
@@ -30,11 +37,14 @@ public class OrderDetailResponse {
     private String color;
 
     public static OrderDetailResponse fromOrderDetail(OrderDetail orderDetail) {
+        Product product = orderDetail.getProduct();
         return OrderDetailResponse
                 .builder()
                 .id(orderDetail.getId())
                 .orderId(orderDetail.getOrder().getId())
-                .productId(orderDetail.getProduct().getId())
+                .productId(product.getId())
+                .productName(product.getName())
+                .productThumbnail(product.getThumbnail())
                 .price(orderDetail.getPrice())
                 .numberOfProducts(orderDetail.getNumberOfProducts())
                 .totalMoney(orderDetail.getTotalMoney())

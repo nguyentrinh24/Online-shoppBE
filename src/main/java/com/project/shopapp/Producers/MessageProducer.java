@@ -10,12 +10,24 @@ import org.springframework.stereotype.Service;
 public class MessageProducer {
     private final RabbitTemplate rabbitTemplate;
 
-    public void sendMessage(String message) {
+    public void sendOrderMessage(String message) {
         rabbitTemplate.convertAndSend(
-                ConfigRabbitmq.EXCHANGE,
-                ConfigRabbitmq.ROUTING_KEY,
+                ConfigRabbitmq.ORDER_EXCHANGE,
+                ConfigRabbitmq.ORDER_ROUTING_KEY,
                 message
         );
     }
 
+    public void sendNotificationMessage(String message) {
+        rabbitTemplate.convertAndSend(
+                ConfigRabbitmq.NOTIFICATION_EXCHANGE,
+                ConfigRabbitmq.NOTIFICATION_ROUTING_KEY,
+                message
+        );
+    }
+
+    // For backward compatibility
+    public void sendMessage(String message) {
+        sendNotificationMessage(message);
+    }
 }

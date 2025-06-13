@@ -1,14 +1,13 @@
 package com.project.shopapp.responses;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.project.shopapp.dtos.OrderDetailDTO;
 import com.project.shopapp.models.Order;
 import com.project.shopapp.models.OrderDetail;
 import lombok.*;
 
 import java.time.LocalDate;
-import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Getter
 @Setter
@@ -59,11 +58,14 @@ public class OrderResponse {
     @JsonProperty("payment_method")
     private String paymentMethod;
 
+    @JsonProperty("coupon_code")
+    private String couponCode;
+
     @JsonProperty("order_details")
-    private List<OrderDetail> orderDetails;
+    private List<OrderDetailResponse> orderDetails;
 
     public static OrderResponse fromOrder(Order order) {
-        OrderResponse orderResponse =  OrderResponse
+        OrderResponse orderResponse = OrderResponse
                 .builder()
                 .id(order.getId())
                 .userId(order.getUser().getId())
@@ -79,7 +81,11 @@ public class OrderResponse {
                 .shippingAddress(order.getShippingAddress())
                 .shippingDate(order.getShippingDate())
                 .paymentMethod(order.getPaymentMethod())
-                .orderDetails(order.getOrderDetails())
+                .couponCode(order.getCouponCode())
+                .orderDetails(order.getOrderDetails() != null ? 
+                    order.getOrderDetails().stream()
+                        .map(OrderDetailResponse::fromOrderDetail)
+                        .collect(Collectors.toList()) : null)
                 .build();
         return orderResponse;
     }
