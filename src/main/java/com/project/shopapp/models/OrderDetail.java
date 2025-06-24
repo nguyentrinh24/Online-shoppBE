@@ -32,7 +32,7 @@ public class OrderDetail {
     @Column(name = "number_of_products", nullable = false)
     private int numberOfProducts;
 
-    @Column(name = "total_money", nullable = false)
+    @Column(name = "total_money")
     private Float totalMoney;
 
     @Column(name = "color")

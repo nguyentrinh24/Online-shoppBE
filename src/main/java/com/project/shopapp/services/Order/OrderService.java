@@ -69,14 +69,14 @@ public class OrderService implements IOrderService {
             Long productId = cartItemDTO.getProductId();
             int quantity = cartItemDTO.getQuantity();
 
-            // Tìm thông tin sản phẩm từ cơ sở dữ liệu  cache )
+            // Tìm thông tin sản phẩm từ cơ sở dữ liệu
             Product product = productRepository.findById(productId)
                     .orElseThrow(() -> new DataNotFoundException("Product not found with id: " + productId));
 
 
             orderDetail.setProduct(product);
             orderDetail.setNumberOfProducts(quantity);
-
+            orderDetail.setTotalMoney(product.getPrice() * quantity);
             orderDetail.setPrice(product.getPrice());
 
             // thêm vào danh sách
@@ -139,7 +139,7 @@ public class OrderService implements IOrderService {
     @Transactional
     public void deleteOrder(Long id) {
         Order order = orderRepository.findById(id).orElse(null);
-        //no hard-delete, => please soft-delete
+        //no hard-delete
         if(order != null) {
             order.setActive(false);
             orderRepository.save(order);

@@ -42,7 +42,6 @@ public class OrderController {
     @Transactional
     public ResponseEntity<?> createOrder(
             @Valid @RequestBody OrderDTO orderDTO,
-            @RequestHeader(name = "Authorization") String authorization,
             BindingResult result
     ) {
         try {
@@ -64,11 +63,10 @@ public class OrderController {
                 return ResponseEntity.badRequest().body("Total money must be greater than 0");
             }
 
-            String token = AuthJwtToken.extractToken(authorization);
+
             Order orderResponse = orderService.createOrder(orderDTO);
 
             return ResponseEntity.ok()
-                    .header(HttpHeaders.AUTHORIZATION, "BEARER " + token)
                     .body(orderResponse);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -76,23 +74,31 @@ public class OrderController {
     }
 
     @GetMapping("/user/{user_id}") // Thêm user_id vào path
-    public ResponseEntity<?> getOrders(@Valid @PathVariable("user_id") Long userId) {
+    public ResponseEntity<?> getOrders(@Valid @PathVariable("user_id") Long userId,
+                                       @RequestHeader("Authorization") String authHeader) {
         try {
+            String token = AuthJwtToken.extractToken(authHeader);
             List<Order> orders = orderService.findByUserId(userId);
             List<OrderResponse> orderResponses = orders.stream()
                     .map(OrderResponse::fromOrder)
                     .toList();
-            return ResponseEntity.ok(orderResponses);
+            return ResponseEntity.ok()
+                    .header(token)
+                    .body(orderResponses);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getOrder(@Valid @PathVariable("id") Long orderId) {
+    public ResponseEntity<?> getOrder(@Valid @PathVariable("id") Long orderId,
+                                      @RequestHeader(name = "Authorization") String authHeader) {
         try {
+            String token  = AuthJwtToken.extractToken(authHeader);
             Order existingOrder = orderService.getOrder(orderId);
-            return ResponseEntity.ok(OrderResponse.fromOrder(existingOrder));
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.AUTHORIZATION, token)
+                    .body(existingOrder);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -121,16 +127,15 @@ public class OrderController {
 
     @DeleteMapping("/{id}")
     @Transactional
-    public ResponseEntity<?> deleteOrder(@Valid @PathVariable Long id,
-                                         @RequestHeader(name = "Authorization") String authorization) {
-        String token = AuthJwtToken.extractToken(authorization);
+    public ResponseEntity<?> deleteOrder(@Valid @PathVariable Long id) {
+
         //xóa mềm => cập nhật trường active = false
         orderService.deleteOrder(id);
 
         String result = localizationUtils.getLocalizedMessage(
                 MessageKeys.DELETE_ORDER_SUCCESSFULLY, id);
         return ResponseEntity.ok()
-                .header(HttpHeaders.AUTHORIZATION,"BEARER " +token)
+
                 .body(result);
     }
 
@@ -138,11 +143,10 @@ public class OrderController {
     public ResponseEntity<OrderListResponse> getOrdersByKeyword(
             @RequestParam(defaultValue = "", required = false) String keyword,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int limit,
-            @RequestHeader(name = "Authorization",required = false) String authorizationHeader
+            @RequestParam(defaultValue = "10") int limit
+
     ) {
-        //token
-        String token = AuthJwtToken.extractToken(authorizationHeader);
+
 
         // Tạo Pageable từ thông tin trang và giới hạn
         PageRequest pageRequest = PageRequest.of(
@@ -162,17 +166,15 @@ public class OrderController {
                 .totalPages(totalPages)
                 .build();
        return ResponseEntity.ok()
-               .header(HttpHeaders.AUTHORIZATION,"BEARER "+token)
                .body(orderResponse);
     }
 
     @GetMapping("/latest")
     public ResponseEntity<?> getLatestOrder(
             @AuthenticationPrincipal User userDetails,
-            @RequestHeader(name = "Authorization", required = false) String authorizationHeader
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader
     ) {
-        //Lấy token
-            String token = AuthJwtToken.extractToken(authorizationHeader);
+        String token = AuthJwtToken.extractToken(authHeader);
 
         //  Lấy đơn hàng mới nhất
         Order order = orderRepository
@@ -183,13 +185,12 @@ public class OrderController {
                 ));
         //Build response
         Map<String,Object> body = Map.of(
-                "token", token,
+                "token",token,
                 "user", UserResponse.fromUser(userDetails),
                 "order", OrderResponse.fromOrder(order)
         );
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.AUTHORIZATION,"BEARER " + token)
                 .body(body);
     }
 }

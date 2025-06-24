@@ -45,6 +45,7 @@ public class WebSecurityConfig {
                                     String.format("%s/products/**", apiPrefix),
                                     String.format("%s/products**", apiPrefix)
 
+
                             )
                             .permitAll()
                             .requestMatchers(GET,
