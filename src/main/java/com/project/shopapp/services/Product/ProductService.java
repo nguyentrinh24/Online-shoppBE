@@ -157,4 +157,12 @@ public class ProductService implements IProductService {
 
         productImageRepository.deleteById(imageId);
     }
+    
+    @Override
+    public List<Product> getFeaturedProducts(int limit) {
+        // For now, return the most recent products as featured
+        // In a real application, you might have a 'featured' field in the Product model
+        PageRequest pageRequest = PageRequest.of(0, limit);
+        return productRepository.findTopByOrderByIdDesc(pageRequest);
+    }
 }

@@ -90,6 +90,32 @@ public class OrderController {
         }
     }
 
+    @GetMapping("/user/{user_id}/orders")
+    public ResponseEntity<?> getUserOrders(
+            @Valid @PathVariable("user_id") Long userId,
+            @RequestParam(defaultValue = "", required = false) String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int limit,
+            @RequestHeader("Authorization") String authHeader) {
+        try {
+            String token = AuthJwtToken.extractToken(authHeader);
+            PageRequest pageRequest = PageRequest.of(page, limit, Sort.by("orderDate").descending());
+            Page<Order> orderPage = orderService.getUserOrders(userId, keyword, pageRequest);
+            Page<OrderResponse> orderResponsePage = orderPage.map(OrderResponse::fromOrder);
+            
+            OrderListResponse orderListResponse = OrderListResponse.builder()
+                    .orders(orderResponsePage.getContent())
+                    .totalPages(orderResponsePage.getTotalPages())
+                    .build();
+            
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.AUTHORIZATION, token)
+                    .body(orderListResponse);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<?> getOrder(@Valid @PathVariable("id") Long orderId,
                                       @RequestHeader(name = "Authorization") String authHeader) {

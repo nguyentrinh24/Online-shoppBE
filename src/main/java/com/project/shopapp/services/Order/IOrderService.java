@@ -15,4 +15,5 @@ public interface IOrderService {
     void deleteOrder(Long id);
     List<Order> findByUserId(Long userId);
     Page<Order> getOrdersByKeyword(String keyword, Pageable pageable);
+    Page<Order> getUserOrders(Long userId, String keyword, Pageable pageable);
 }

@@ -154,4 +154,12 @@ public class OrderService implements IOrderService {
     public Page<Order> getOrdersByKeyword(String keyword, Pageable pageable) {
         return orderRepository.findByKeyword(keyword, pageable);
     }
+
+    @Override
+    public Page<Order> getUserOrders(Long userId, String keyword, Pageable pageable) {
+        if (keyword != null && !keyword.isEmpty()) {
+            return orderRepository.findByUserIdAndKeyword(userId, keyword, pageable);
+        }
+        return orderRepository.findByUserId(userId, pageable);
+    }
 }

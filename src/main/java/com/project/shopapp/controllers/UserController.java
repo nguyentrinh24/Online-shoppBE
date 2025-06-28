@@ -13,6 +13,9 @@ import com.project.shopapp.utils.MessageKeys;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
@@ -133,6 +136,48 @@ public class UserController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
             User updatedUser = userService.updateUser(userId, updatedUserDTO);
+            return ResponseEntity.ok(UserResponse.fromUser(updatedUser));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    // Admin endpoints
+    @GetMapping("")
+    public ResponseEntity<Page<UserResponse>> getAllUsers(
+            @RequestParam(defaultValue = "") String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int limit
+    ) {
+        try {
+            Pageable pageable = PageRequest.of(page, limit);
+            Page<User> users = userService.getAllUsers(keyword, pageable);
+            Page<UserResponse> userResponses = users.map(UserResponse::fromUser);
+            return ResponseEntity.ok(userResponses);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @DeleteMapping("/{userId}")
+    @Transactional
+    public ResponseEntity<String> deleteUser(@PathVariable Long userId) {
+        try {
+            userService.deleteUser(userId);
+            return ResponseEntity.ok("User deleted successfully");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PutMapping("/role/{userId}")
+    @Transactional
+    public ResponseEntity<UserResponse> updateUserRole(
+            @PathVariable Long userId,
+            @RequestBody String newRole
+    ) {
+        try {
+            User updatedUser = userService.updateUserRole(userId, newRole);
             return ResponseEntity.ok(UserResponse.fromUser(updatedUser));
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();

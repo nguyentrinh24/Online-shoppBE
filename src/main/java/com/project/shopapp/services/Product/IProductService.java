@@ -23,4 +23,7 @@ public interface IProductService {
     void deleteProductImage(Long imageId) throws Exception;
 
     List<Product> findProductsByIds(List<Long> productIds);
+    
+    // Featured products method
+    List<Product> getFeaturedProducts(int limit);
 }

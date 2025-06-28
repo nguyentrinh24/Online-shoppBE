@@ -24,4 +24,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     @Query("SELECT p FROM Product p WHERE p.id IN :productIds")
     List<Product> findProductsByIds(@Param("productIds") List<Long> productIds);
+    
+    // Featured products - get the most recent products
+    List<Product> findTopByOrderByIdDesc(Pageable pageable);
 }

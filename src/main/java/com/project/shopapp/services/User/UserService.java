@@ -14,6 +14,9 @@ import com.project.shopapp.repositories.UserRepository;
 import com.project.shopapp.utils.MessageKeys;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -165,6 +168,42 @@ public class UserService implements IUserService {
         } else {
             throw new Exception("User not found");
         }
+    }
+
+    // Admin methods
+    @Override
+    public Page<User> getAllUsers(String keyword, Pageable pageable) throws Exception {
+        if (keyword != null && !keyword.isEmpty()) {
+            return userRepository.findByFullNameContainingIgnoreCase(keyword, pageable);
+        }
+        return userRepository.findAll(pageable);
+    }
+
+    @Override
+    @Transactional
+    public void deleteUser(Long userId) throws Exception {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new DataNotFoundException("User not found"));
+        
+        // Prevent admin from deleting themselves
+        if (user.getRole().getName().equals(Role.ADMIN)) {
+            throw new PermissionDenyException("Cannot delete admin user");
+        }
+        
+        userRepository.delete(user);
+    }
+
+    @Override
+    @Transactional
+    public User updateUserRole(Long userId, String newRole) throws Exception {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new DataNotFoundException("User not found"));
+        
+        Role role = roleRepository.findByName(newRole.toUpperCase())
+                .orElseThrow(() -> new DataNotFoundException("Role not found"));
+        
+        user.setRole(role);
+        return userRepository.save(user);
     }
 }
 

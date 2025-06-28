@@ -124,6 +124,16 @@ public class ProductController {
         }
     }
 
+    @GetMapping("/featured")
+    public ResponseEntity<?> getFeaturedProducts(@RequestParam(defaultValue = "8") int limit) {
+        try {
+            List<Product> featuredProducts = productService.getFeaturedProducts(limit);
+            return ResponseEntity.ok(featuredProducts);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     @DeleteMapping("/{id}")
     @Transactional
     public ResponseEntity<String> deleteProduct(@PathVariable long id) {

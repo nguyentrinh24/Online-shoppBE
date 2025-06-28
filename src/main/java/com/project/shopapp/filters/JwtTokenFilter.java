@@ -76,10 +76,15 @@ public class JwtTokenFilter extends OncePerRequestFilter{
         final List<Pair<String, String>> bypassTokens = Arrays.asList(
                 Pair.of(String.format("%s/users/register", apiPrefix), "POST"),
                 Pair.of(String.format("%s/users/login", apiPrefix), "POST"),
-                Pair.of(String.format("%s/products**",apiPrefix),"GET"),
-                Pair.of(String.format("%s/products/**",apiPrefix),"GET")
-
-
+                Pair.of(String.format("%s/healthcheck/**", apiPrefix), "GET"),
+                Pair.of(String.format("%s/categories**", apiPrefix), "GET"),
+                Pair.of(String.format("%s/categories/**", apiPrefix), "GET"),
+                Pair.of(String.format("%s/products**", apiPrefix), "GET"),
+                Pair.of(String.format("%s/products/**", apiPrefix), "GET"),
+                Pair.of(String.format("%s/products/featured", apiPrefix), "GET"),
+                Pair.of(String.format("%s/products/images/*", apiPrefix), "GET"),
+                Pair.of(String.format("%s/banners/**", apiPrefix), "GET"),
+                Pair.of(String.format("%s/coupons/calculate", apiPrefix), "GET")
         );
 
         String requestPath = request.getServletPath();
@@ -94,7 +99,6 @@ public class JwtTokenFilter extends OncePerRequestFilter{
                 return true;
             }
         }
-
 
         return false;
     }
