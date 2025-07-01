@@ -27,4 +27,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     
     // Featured products - get the most recent products
     List<Product> findTopByOrderByIdDesc(Pageable pageable);
+
+    // Lấy sản phẩm nổi bật nhất (ví dụ: sản phẩm bán chạy nhất)
+    @Query("SELECT p FROM Product p ORDER BY p.id DESC LIMIT 1")
+    Product findTopByOrderByIdDesc();
 }

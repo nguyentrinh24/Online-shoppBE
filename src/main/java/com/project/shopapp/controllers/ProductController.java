@@ -264,6 +264,18 @@ public class ProductController {
         }
     }
 
+    @GetMapping("/featured/best")
+    public ResponseEntity<?> getBestFeaturedProduct() {
+        try {
+            Product product = productService.getFeaturedProduct();
+            if (product == null) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(product);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 
     // fake date
 //    @PostMapping("/generate-fake")

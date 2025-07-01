@@ -26,4 +26,6 @@ public interface IProductService {
     
     // Featured products method
     List<Product> getFeaturedProducts(int limit);
+
+    Product getFeaturedProduct();
 }

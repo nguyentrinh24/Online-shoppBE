@@ -14,6 +14,7 @@ import com.project.shopapp.responses.Product.ProductResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.nio.file.Files;
@@ -28,6 +29,10 @@ public class ProductService implements IProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final ProductImageRepository productImageRepository;
+
+    // Inject RedisTemplate
+    private final RedisTemplate<String, Object> redisTemplate;
+    private static final String FEATURED_PRODUCT_KEY = "featured_product";
 
     @Override
     @Transactional
@@ -160,9 +165,19 @@ public class ProductService implements IProductService {
     
     @Override
     public List<Product> getFeaturedProducts(int limit) {
-        // For now, return the most recent products as featured
-        // In a real application, you might have a 'featured' field in the Product model
+
         PageRequest pageRequest = PageRequest.of(0, limit);
         return productRepository.findTopByOrderByIdDesc(pageRequest);
+    }
+
+    public Product getFeaturedProduct() {
+        Product product = (Product) redisTemplate.opsForValue().get(FEATURED_PRODUCT_KEY);
+        if (product == null) {
+            product = productRepository.findTopByOrderByIdDesc();
+            if (product != null) {
+                redisTemplate.opsForValue().set(FEATURED_PRODUCT_KEY, product);
+            }
+        }
+        return product;
     }
 }
